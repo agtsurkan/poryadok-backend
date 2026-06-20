@@ -1,0 +1,47 @@
+[project]
+name = "poryadok-backend"
+version = "0.1.0"
+description = "Backend for «Порядок» — a calm personal place to put your tasks and people in order. P0: auth + state bundle bridge."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "aiosqlite>=0.20",
+    "alembic>=1.14",
+    "pydantic[email]>=2.9",
+    "pydantic-settings>=2.6",
+    "pyjwt>=2.10",
+    "bcrypt>=4.2",
+]
+
+[project.optional-dependencies]
+# P1/P2 integrations — not needed for P0, listed so the seams are explicit.
+ai = ["anthropic>=0.40", "openai>=1.55"]
+telegram = ["aiogram>=3.15"]
+jobs = ["apscheduler>=3.10"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.28",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

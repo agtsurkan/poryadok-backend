@@ -1,0 +1,1 @@
+"""Порядок backend application package."""

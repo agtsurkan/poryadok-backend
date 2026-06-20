@@ -1,0 +1,30 @@
+# Render Blueprint — one web service + managed Postgres.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: poryadok-backend
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    # The Docker CMD (scripts/start.sh) runs `alembic upgrade head` before serving.
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: poryadok-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AUTH_EMAIL
+        sync: false # set in dashboard
+      - key: AUTH_PASSWORD
+        sync: false # set in dashboard
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: COOLING_WARM_DAYS
+        value: "7"
+      - key: COOLING_COLD_DAYS
+        value: "21"
+
+databases:
+  - name: poryadok-db
+    plan: free
