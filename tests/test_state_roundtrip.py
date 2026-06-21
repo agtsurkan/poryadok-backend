@@ -61,7 +61,7 @@ async def test_partial_put_preserves_absent_types(auth_client):
     assert len(got["clients"]) == 4  # absent type untouched
     assert len(got["projects"]) == 5
     assert len(got["directions"]) == 2
-    assert len(got["history"]) == 5
+    assert len(got["history"]) == 6
     assert len(got["links"]) == 2
 
 

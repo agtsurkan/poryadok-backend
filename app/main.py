@@ -5,19 +5,41 @@ Run locally:  uvicorn app.main:app --reload
 
 from __future__ import annotations
 
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import auth as auth_router
+from app.api import entities as entities_router
+from app.api import proactive as proactive_router
 from app.api import state as state_router
 from app.config import get_settings
 
 settings = get_settings()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = None
+    if settings.scheduler_enabled:
+        try:
+            from app.jobs import start_scheduler
+
+            scheduler = start_scheduler()
+        except Exception:  # never let the scheduler block serving
+            logging.getLogger("poryadok").exception("scheduler failed to start")
+    yield
+    if scheduler is not None:
+        scheduler.shutdown(wait=False)
+
+
 app = FastAPI(
     title="Порядок API",
     version="0.1.0",
-    summary="Calm personal order — P0 backend (auth + state bundle bridge).",
+    summary="Calm personal order — P0 (state bridge) + P1 (proactivity).",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -32,6 +54,8 @@ app.add_middleware(
 
 app.include_router(auth_router.router)
 app.include_router(state_router.router)
+app.include_router(proactive_router.router)
+app.include_router(entities_router.router)
 
 
 @app.get("/health", tags=["meta"])

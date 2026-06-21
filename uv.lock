@@ -982,6 +982,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
     { name = "alembic" },
+    { name = "apscheduler" },
     { name = "asyncpg" },
     { name = "bcrypt" },
     { name = "fastapi" },
@@ -996,9 +997,6 @@ dependencies = [
 ai = [
     { name = "anthropic" },
     { name = "openai" },
-]
-jobs = [
-    { name = "apscheduler" },
 ]
 telegram = [
     { name = "aiogram" },
@@ -1017,7 +1015,7 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20" },
     { name = "alembic", specifier = ">=1.14" },
     { name = "anthropic", marker = "extra == 'ai'", specifier = ">=0.40" },
-    { name = "apscheduler", marker = "extra == 'jobs'", specifier = ">=3.10" },
+    { name = "apscheduler", specifier = ">=3.10" },
     { name = "asyncpg", specifier = ">=0.30" },
     { name = "bcrypt", specifier = ">=4.2" },
     { name = "fastapi", specifier = ">=0.115" },
@@ -1028,7 +1026,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]
-provides-extras = ["ai", "telegram", "jobs"]
+provides-extras = ["ai", "telegram"]
 
 [package.metadata.requires-dev]
 dev = [

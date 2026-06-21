@@ -15,13 +15,13 @@ dependencies = [
     "pydantic-settings>=2.6",
     "pyjwt>=2.10",
     "bcrypt>=4.2",
+    "apscheduler>=3.10",
 ]
 
 [project.optional-dependencies]
-# P1/P2 integrations — not needed for P0, listed so the seams are explicit.
+# P2 integrations — not needed yet, listed so the seams are explicit.
 ai = ["anthropic>=0.40", "openai>=1.55"]
 telegram = ["aiogram>=3.15"]
-jobs = ["apscheduler>=3.10"]
 
 [dependency-groups]
 dev = [

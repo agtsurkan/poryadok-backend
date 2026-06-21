@@ -1,14 +1,17 @@
-# Порядок — backend (P0)
+# Порядок — backend (P0 + P1)
 
 Бэкенд для «Порядка» — тихого личного места навести порядок в делах и людях.
 
-**P0 = «оживить фронт»:** заменить `localStorage` реальным сервером с авторизацией,
-чтобы продуктом можно было пользоваться с разных устройств и начать догфудинг.
+**P0 = «оживить фронт»:** заменить `localStorage` реальным сервером с авторизацией.
 API говорит на **JSON-модели существующего фронта** (см. бриф §2–§4): `GET/PUT /state`
 отдают/принимают весь bundle, а внутри он раскладывается по сущностям.
 
-> Это P0. «Душа» (проактивность, тёплые касания, дайджест) и Telegram-захват —
-> P1/P2 поверх той же базы. Здесь их нет намеренно.
+**P1 = «душа»:** вычисление остывания клиентов из лога касаний, тёплые касания
+(`/suggestions/touches`), спокойный утренний дайджест (`/digest/morning`), ночная
+джоба пересчёта и по-сущностный CRUD. Тон — забота, не тревога; без счётчиков-долгов.
+
+> P2 (Telegram + Claude: захват → подтверждение → запись) — следующий слой поверх той же
+> базы; ему нужны ключи/бот.
 
 ## Definition of Done (P0) — выполнено
 
@@ -108,6 +111,10 @@ uv run uvicorn app.main:app --reload
 | GET   | `/state`      | весь bundle (гидрация при загрузке)         | ✓ |
 | PUT   | `/state`      | сохранить bundle (debounced-автосейв)       | ✓ |
 | GET   | `/health`     | healthcheck                                 | — |
+| GET   | `/suggestions/touches` | клиенты, которым пора тёплое касание (P1) | ✓ |
+| GET   | `/digest/morning`      | спокойная сводка на день (P1)             | ✓ |
+| —     | `/{tasks,thoughts,projects,clients,directions,events,quicklinks,services,history}` | CRUD по сущностям: `GET/POST` коллекция, `PATCH/DELETE /{id}` (P1) | ✓ |
+| —     | `/links`      | граф «сцепок»: `GET/POST`, `DELETE /{id}` (P1) | ✓ |
 
 ```bash
 # логин → токен
@@ -168,17 +175,21 @@ railway run python -m app.seed
 | `JWT_SECRET` | подпись JWT (≥ 32 байт; `openssl rand -hex 32`) | dev-заглушка |
 | `JWT_EXPIRE_DAYS` | срок жизни токена | `30` |
 | `CORS_ORIGINS` | разрешённые origin фронта (через запятую) | `*` |
-| `COOLING_WARM_DAYS` / `COOLING_COLD_DAYS` | пороги остывания (для P1) | `7` / `21` |
+| `COOLING_WARM_DAYS` / `COOLING_COLD_DAYS` | пороги остывания | `7` / `21` |
+| `SCHEDULER_ENABLED` | ночная джоба пересчёта остывания | `true` |
+| `DIGEST_HOUR` | час (UTC) пересчёта | `7` |
 
 > Если managed-URL содержит `?sslmode=require`, уберите параметр (asyncpg использует свой
 > SSL); для внутренних URL Railway/Render это обычно не нужно.
 
-## Дальше (после ревью P0)
+## Статус фаз
 
-- **P1** — проактивность: CRUD по сущностям, `last_touch_at` и вычисление `state` клиента,
-  `/suggestions/touches`, `/digest/morning`, ночная джоба; расчёты по `history`-логу.
-- **P2** — Telegram + Claude: webhook, транскрипция (Whisper), роутинг, черновик →
-  подтверждение → запись.
+- **P0 ✅** — auth + `GET/PUT /state` (мост вместо localStorage), сидер, тесты, деплой.
+- **P1 ✅** — остывание клиентов, `/suggestions/touches`, `/digest/morning`, ночная джоба,
+  по-сущностный CRUD + `/links`.
+- **P2** (дальше) — Telegram + Claude: webhook, транскрипция (Whisper), роутинг интента,
+  черновик → подтверждение → запись. Нужны `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` /
+  `TELEGRAM_BOT_TOKEN`.
 - **P3** — мультипользовательность, регистрация, биллинг, коннекторы.
 
 ## Подключение фронта

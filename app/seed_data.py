@@ -111,8 +111,9 @@ def demo_bundle() -> dict[str, Any]:
         "history": [
             {"id": "h1", "kind": "order", "subject": "client:c1", "amount": 180000, "note": "Редизайн сайта студии", "occurred_at": _days_ago(40)},
             {"id": "h2", "kind": "invoice", "subject": "client:c1", "amount": 90000, "note": "Предоплата 50%", "occurred_at": _days_ago(38)},
-            {"id": "h3", "kind": "touch", "subject": "client:c1", "amount": None, "note": "Созвон по брендбуку", "occurred_at": _days_ago(14)},
+            {"id": "h3", "kind": "touch", "subject": "client:c1", "amount": None, "note": "Созвон по брендбуку", "occurred_at": _days_ago(24)},
             {"id": "h4", "kind": "order", "subject": "client:c2", "amount": 140000, "note": "Сайт-меню с доставкой", "occurred_at": _days_ago(6)},
             {"id": "h5", "kind": "session", "subject": "client:c4", "amount": 15000, "note": "Консультация по подаче", "occurred_at": _days_ago(1)},
+            {"id": "h6", "kind": "touch", "subject": "client:c3", "amount": None, "note": "Звонок по смете", "occurred_at": _days_ago(10)},
         ],
     }

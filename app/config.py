@@ -26,9 +26,13 @@ class Settings(BaseSettings):
     # ── CORS ──────────────────────────────────────────────────────────────────
     cors_origins: str = "*"
 
-    # ── Client-cooling thresholds (P1 seam; harmless now) ─────────────────────
+    # ── Client-cooling thresholds (P1) ────────────────────────────────────────
     cooling_warm_days: int = 7
     cooling_cold_days: int = 21
+
+    # ── Nightly recompute job (P1) ────────────────────────────────────────────
+    scheduler_enabled: bool = True
+    digest_hour: int = 7  # local hour to recompute cooling / prepare digests
 
     # ── Optional integrations (P1/P2) ─────────────────────────────────────────
     anthropic_api_key: str | None = None
