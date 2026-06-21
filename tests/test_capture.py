@@ -90,3 +90,33 @@ async def test_webhook_guarded_when_unconfigured(client):
     # No TELEGRAM_BOT_TOKEN in the test env → endpoint is unavailable.
     resp = await client.post("/telegram/webhook", json={"update_id": 1})
     assert resp.status_code == 503
+
+
+async def test_webhook_fails_closed_when_secret_unset(client, monkeypatch):
+    """Bot enabled but no webhook secret must refuse to serve, never fail open."""
+    from app.api import telegram as tg
+
+    monkeypatch.setattr(tg.settings, "telegram_bot_token", "test-token")
+    monkeypatch.setattr(tg.settings, "telegram_webhook_secret", None)
+    resp = await client.post("/telegram/webhook", json={"update_id": 1})
+    assert resp.status_code == 503  # not 200 — a missing secret closes the door
+
+
+async def test_webhook_requires_matching_secret(client, monkeypatch):
+    from app.api import telegram as tg
+
+    monkeypatch.setattr(tg.settings, "telegram_bot_token", "test-token")
+    monkeypatch.setattr(tg.settings, "telegram_webhook_secret", "s3cret")
+
+    # Missing and wrong secret headers are both rejected.
+    assert (await client.post("/telegram/webhook", json={"update_id": 1})).status_code == 403
+    bad = await client.post(
+        "/telegram/webhook", json={"update_id": 1}, headers={"X-Telegram-Bot-Api-Secret-Token": "nope"}
+    )
+    assert bad.status_code == 403
+
+    # Correct secret is accepted (empty update is a harmless no-op).
+    ok = await client.post(
+        "/telegram/webhook", json={"update_id": 1}, headers={"X-Telegram-Bot-Api-Secret-Token": "s3cret"}
+    )
+    assert ok.status_code == 200

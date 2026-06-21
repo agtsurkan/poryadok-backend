@@ -11,6 +11,7 @@ the test suite; the routing/draft/write logic underneath it is unit-tested.
 from __future__ import annotations
 
 import logging
+import secrets
 import uuid
 from typing import Any
 
@@ -72,7 +73,17 @@ async def webhook(
 ) -> dict[str, Any]:
     if not settings.telegram_enabled:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Telegram not configured")
-    if settings.telegram_webhook_secret and x_telegram_bot_api_secret_token != settings.telegram_webhook_secret:
+    # The secret token is the trust boundary that proves an update really came
+    # from Telegram. Require it whenever the bot is enabled — never fail open:
+    # an unset secret refuses to serve rather than accepting any caller.
+    if not settings.telegram_webhook_secret:
+        log.error("TELEGRAM_WEBHOOK_SECRET is unset; refusing to process webhook updates")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Telegram webhook secret not configured"
+        )
+    if not x_telegram_bot_api_secret_token or not secrets.compare_digest(
+        x_telegram_bot_api_secret_token, settings.telegram_webhook_secret
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="bad secret token")
 
     update = await request.json()
