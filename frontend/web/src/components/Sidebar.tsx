@@ -1,6 +1,9 @@
 import { clearToken } from "../api";
 
-// «Главная» is live; deeper sections are stubs (extensible next).
+export type View = "home" | "inbox";
+
+// Live sections are enabled; deeper ones are stubs (extensible next).
+const ENABLED = new Set<string>(["home", "inbox"]);
 const PRIMARY: [string, string, string][] = [
   ["home", "Главная", "◎"],
   ["inbox", "Мысли", "✶"],
@@ -13,7 +16,30 @@ const DEEP: [string, string, string][] = [
   ["map", "Карта связей", "⌥"],
 ];
 
-export function Sidebar({ onLogout }: { onLogout: () => void }) {
+export function Sidebar({
+  current,
+  onNavigate,
+  onLogout,
+}: {
+  current: View;
+  onNavigate: (view: View) => void;
+  onLogout: () => void;
+}) {
+  const item = ([id, label, ico]: [string, string, string]) => {
+    const enabled = ENABLED.has(id);
+    return (
+      <button
+        key={id}
+        className={current === id ? "active" : ""}
+        disabled={!enabled}
+        onClick={enabled ? () => onNavigate(id as View) : undefined}
+      >
+        <span className="ico">{ico}</span>
+        {label}
+      </button>
+    );
+  };
+
   return (
     <aside className="aside">
       <div className="brand">
@@ -25,19 +51,9 @@ export function Sidebar({ onLogout }: { onLogout: () => void }) {
       </div>
 
       <nav className="nav">
-        {PRIMARY.map(([id, label, ico]) => (
-          <button key={id} className={id === "home" ? "active" : ""} disabled={id !== "home"}>
-            <span className="ico">{ico}</span>
-            {label}
-          </button>
-        ))}
+        {PRIMARY.map(item)}
         <div className="group-label">Глубже</div>
-        {DEEP.map(([id, label, ico]) => (
-          <button key={id} disabled>
-            <span className="ico">{ico}</span>
-            {label}
-          </button>
-        ))}
+        {DEEP.map(item)}
       </nav>
 
       <div className="foot">

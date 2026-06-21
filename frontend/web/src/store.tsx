@@ -12,6 +12,8 @@ interface Store {
   toggleTask: (id: string) => void;
   addTask: (text: string) => void;
   addThought: (text: string) => void;
+  removeThought: (id: string) => void;
+  promoteThought: (id: string) => void;
 }
 
 const StoreCtx = createContext<Store | null>(null);
@@ -86,6 +88,23 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
       }),
     addThought: (text) =>
       save({ ...bundle, inbox: [{ id: rid("i"), text, when: "сейчас", kind: "note", link: null }, ...inbox] }),
+    removeThought: (id) => save({ ...bundle, inbox: inbox.filter((t) => t.id !== id) }),
+    promoteThought: (id) => {
+      const thought = inbox.find((t) => t.id === id);
+      if (!thought) return;
+      const tag: Task["tag"] =
+        thought.link?.type === "project" ? "project" : thought.link?.type === "client" ? "client" : "note";
+      const task: Task = {
+        id: rid("t"),
+        text: thought.text,
+        tag,
+        effort: 2,
+        today: true,
+        done: false,
+        link: thought.link ?? null,
+      };
+      save({ ...bundle, tasks: [task, ...tasks], inbox: inbox.filter((t) => t.id !== id) });
+    },
   };
 
   return <StoreCtx.Provider value={store}>{children}</StoreCtx.Provider>;
