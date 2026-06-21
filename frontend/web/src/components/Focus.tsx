@@ -1,6 +1,14 @@
 import type { Task } from "../types";
 
-export function Focus({ task, onDone, onSkip }: { task: Task; onDone: (id: string) => void; onSkip: () => void }) {
+export function Focus({
+  task,
+  onDone,
+  onSkip,
+}: {
+  task: Task;
+  onDone: (id: string) => void;
+  onSkip?: () => void;
+}) {
   return (
     <div className="card focus">
       <span className="label">Сегодня в фокусе</span>
@@ -9,9 +17,11 @@ export function Focus({ task, onDone, onSkip }: { task: Task; onDone: (id: strin
         <button className="btn-primary" onClick={() => onDone(task.id)}>
           Сделано
         </button>
-        <button className="btn-ghost" onClick={onSkip}>
-          Не сейчас
-        </button>
+        {onSkip && (
+          <button className="btn-ghost" onClick={onSkip}>
+            Не сейчас
+          </button>
+        )}
       </div>
     </div>
   );

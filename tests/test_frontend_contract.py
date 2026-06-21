@@ -65,6 +65,7 @@ async def test_touches_shape_for_warm_card(auth_client):
     assert resp.status_code == 200, resp.text
     rows = resp.json()
     assert isinstance(rows, list)
+    assert rows, "demo data has a cold + warm client, so the card has something to show"
     for row in rows:
         for field in ("id", "name", "state", "days_since", "next"):
             assert field in row, f"touch row missing {field!r}"

@@ -199,6 +199,13 @@ input { font-family: inherit; }
 
 .center-note { text-align: center; color: var(--text-3); padding: 60px; font-size: 14px; }
 
+.save-toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--care);
+  color: var(--text-2); font-size: 13px; padding: 10px 16px; border-radius: 12px;
+  box-shadow: var(--e-raise); z-index: 50;
+}
+
 /* ── Мысли (inbox) ───────────────────────────────────────────────────────── */
 .thoughts { display: flex; flex-direction: column; gap: 4px; }
 .thought {

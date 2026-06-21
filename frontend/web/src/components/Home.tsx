@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useStore } from "../store";
-import type { ActivityEvent, Energy } from "../types";
+import type { ActivityEvent, Energy, Task } from "../types";
 import { CheckIn } from "./CheckIn";
 import { Focus, AllDone } from "./Focus";
 import { TodayTasks } from "./TodayTasks";
@@ -15,28 +15,51 @@ export function Home() {
   const { loading, error, tasks, touches, bundle, toggleTask, addTask, addThought } = useStore();
   const [started, setStarted] = useState(false);
   const [energy, setEnergy] = useState<Energy>("mid");
-  const [skip, setSkip] = useState(0);
+  const [minutes, setMinutes] = useState(30);
+  const [focusId, setFocusId] = useState<string | null>(null);
 
   if (loading) return <main className="main"><div className="center-note">Загружаю…</div></main>;
   if (error) return <main className="main"><div className="center-note">Не вышло загрузить: {error}</div></main>;
 
-  // Pick one task under the chosen energy (low→light, high→demanding).
+  // Pick one task under the check-in: tasks over the time budget sink, then
+  // rank by closeness to the chosen energy (low→light, high→demanding).
   const open = tasks.filter((t) => t.today && !t.done);
+  const maxEffort = minutes <= 15 ? 1 : minutes <= 30 ? 2 : 3;
   const target = energy === "low" ? 1 : energy === "high" ? 3 : 2;
-  const ranked = [...open].sort((a, b) => Math.abs((a.effort ?? 2) - target) - Math.abs((b.effort ?? 2) - target));
-  const focusTask = ranked.length ? ranked[skip % ranked.length] : null;
+  const score = (t: Task) => {
+    const e = t.effort ?? 2;
+    return (e > maxEffort ? 10 : 0) + Math.abs(e - target);
+  };
+  const ranked = [...open].sort((a, b) => score(a) - score(b));
+  // Hold focus on a task by id, so completing something in the list below
+  // doesn't make the focus card jump to a different task.
+  const focusTask = open.find((t) => t.id === focusId) ?? ranked[0] ?? null;
   const events = (bundle.events as ActivityEvent[] | undefined) ?? [];
+
+  const skipFocus = () => {
+    if (ranked.length <= 1) return;
+    const idx = ranked.findIndex((t) => t.id === focusTask?.id);
+    setFocusId(ranked[(idx + 1) % ranked.length].id);
+  };
 
   const hero = !started ? (
     <CheckIn
-      onStart={(e) => {
+      onStart={(e, m) => {
         setEnergy(e);
-        setSkip(0);
+        setMinutes(m);
+        setFocusId(null);
         setStarted(true);
       }}
     />
   ) : focusTask ? (
-    <Focus task={focusTask} onDone={(id) => { toggleTask(id); setSkip(0); }} onSkip={() => setSkip((s) => s + 1)} />
+    <Focus
+      task={focusTask}
+      onDone={(id) => {
+        toggleTask(id);
+        setFocusId(null);
+      }}
+      onSkip={ranked.length > 1 ? skipFocus : undefined}
+    />
   ) : (
     <AllDone />
   );

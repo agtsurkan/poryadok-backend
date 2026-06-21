@@ -7,6 +7,7 @@ interface Store {
   touches: Touch[];
   loading: boolean;
   error: string | null;
+  saveError: boolean;
   tasks: Task[];
   inbox: Thought[];
   toggleTask: (id: string) => void;
@@ -31,7 +32,10 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
   const [touches, setTouches] = useState<Touch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState(false);
   const timer = useRef<number | undefined>(undefined);
+  const retry = useRef<number | undefined>(undefined);
+  const pending = useRef<Bundle | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -57,16 +61,33 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
     };
   }, [onAuthLost]);
 
+  // Push the latest pending bundle to the server. On failure, keep it pending,
+  // raise a calm flag, and retry — so a dropped request never silently strands
+  // the optimistic UI ahead of the server.
+  function flush() {
+    const next = pending.current;
+    if (!next) return;
+    api
+      .putState(next)
+      .then(() => {
+        pending.current = null;
+        setSaveError(false);
+      })
+      .catch((e) => {
+        if (e instanceof Error && e.message === "Сессия истекла") return onAuthLost();
+        setSaveError(true);
+        window.clearTimeout(retry.current);
+        retry.current = window.setTimeout(flush, 3000);
+      });
+  }
+
   // Optimistic local update + debounced save of the whole bundle (backend
   // merges by presence, so sending the full bundle is safe).
   function save(next: Bundle) {
     setBundle(next);
+    pending.current = next;
     window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      api.putState(next).catch((e) => {
-        if (e instanceof Error && e.message === "Сессия истекла") onAuthLost();
-      });
-    }, 600);
+    timer.current = window.setTimeout(flush, 600);
   }
 
   const tasks = (bundle.tasks ?? []) as Task[];
@@ -77,6 +98,7 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
     touches,
     loading,
     error,
+    saveError,
     tasks,
     inbox,
     toggleTask: (id) =>

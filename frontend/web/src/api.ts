@@ -32,6 +32,11 @@ async function authed(path: string, init: RequestInit = {}): Promise<Response> {
     clearToken();
     throw new AuthError("Сессия истекла");
   }
+  if (!resp.ok) {
+    // Surface a meaningful error instead of letting a non-JSON body (e.g. a
+    // 502 HTML page) blow up an unguarded .json() with an opaque SyntaxError.
+    throw new Error(`Сервер ответил ${resp.status}`);
+  }
   return resp;
 }
 
