@@ -34,3 +34,8 @@ htmlcov/
 .DS_Store
 .idea/
 .vscode/
+
+# Node / web frontend
+node_modules/
+frontend/web/dist/
+*.tsbuildinfo
