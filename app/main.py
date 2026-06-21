@@ -15,6 +15,7 @@ from app.api import auth as auth_router
 from app.api import entities as entities_router
 from app.api import proactive as proactive_router
 from app.api import state as state_router
+from app.api import telegram as telegram_router
 from app.config import get_settings
 
 settings = get_settings()
@@ -56,6 +57,7 @@ app.include_router(auth_router.router)
 app.include_router(state_router.router)
 app.include_router(proactive_router.router)
 app.include_router(entities_router.router)
+app.include_router(telegram_router.router)
 
 
 @app.get("/health", tags=["meta"])

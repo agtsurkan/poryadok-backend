@@ -1,4 +1,4 @@
-# Порядок — backend (P0 + P1)
+# Порядок — backend (P0 + P1 + P2)
 
 Бэкенд для «Порядка» — тихого личного места навести порядок в делах и людях.
 
@@ -56,18 +56,24 @@ app/
   auth.py            # bcrypt, JWT, зависимость current_user
   api/
     auth.py          # POST /auth/login, GET /auth/me
-    state.py         # GET/PUT /state  (P0)
+    state.py         # GET/PUT /state                       (P0)
+    proactive.py     # /suggestions/touches, /digest/morning (P1)
+    entities.py      # per-entity CRUD + /links              (P1)
+    telegram.py      # /telegram/webhook                     (P2)
   services/
     bundle.py        # StateBundle <-> documents/links/settings
+    cooling.py       # client cooling / warm touches         (P1)
+    digest.py        # morning digest                        (P1)
+    llm.py           # Claude intent routing                 (P2)
+    transcribe.py    # Whisper voice transcription           (P2)
+    capture.py       # capture → confirm → write             (P2)
+  jobs.py            # APScheduler nightly recompute          (P1)
   seed_data.py       # демо-данные (из фронта) + демо history-лог
   seed.py            # python -m app.seed
 alembic/             # миграции (async env)
-tests/               # round-trip + auth (на SQLite)
-Dockerfile · render.yaml · railway.json · Procfile
+tests/               # 23 тестов (round-trip, auth, проактивность, CRUD, capture)
+Dockerfile · render.yaml · railway.json · Procfile · .github/workflows/ci.yml
 ```
-
-> `api/entities.py`, `services/cooling.py`, `services/digest.py`, `jobs.py`,
-> `api/telegram.py` появятся в P1/P2 — сейчас их нет намеренно.
 
 ## Быстрый старт (локально, PostgreSQL)
 
@@ -115,6 +121,7 @@ uv run uvicorn app.main:app --reload
 | GET   | `/digest/morning`      | спокойная сводка на день (P1)             | ✓ |
 | —     | `/{tasks,thoughts,projects,clients,directions,events,quicklinks,services,history}` | CRUD по сущностям: `GET/POST` коллекция, `PATCH/DELETE /{id}` (P1) | ✓ |
 | —     | `/links`      | граф «сцепок»: `GET/POST`, `DELETE /{id}` (P1) | ✓ |
+| POST  | `/telegram/webhook` | захват из Telegram → подтверждение → запись (P2) | secret |
 
 ```bash
 # логин → токен
@@ -144,7 +151,7 @@ curl -s -X PUT localhost:8000/state -H "Authorization: Bearer $TOKEN" \
 ## Тесты
 
 ```bash
-uv run pytest          # 10 тестов, на in-memory SQLite, без внешних сервисов
+uv run pytest          # 23 теста, на in-memory SQLite, без внешних сервисов
 ```
 
 Покрывают: round-trip `PUT→GET`, безопасный merge частичного сейва, очистку типа
@@ -178,6 +185,11 @@ railway run python -m app.seed
 | `COOLING_WARM_DAYS` / `COOLING_COLD_DAYS` | пороги остывания | `7` / `21` |
 | `SCHEDULER_ENABLED` | ночная джоба пересчёта остывания | `true` |
 | `DIGEST_HOUR` | час (UTC) пересчёта | `7` |
+| `TELEGRAM_BOT_TOKEN` | токен бота (наличие включает webhook) (P2) | — |
+| `TELEGRAM_ALLOWED_USER_IDS` | whitelist id через запятую (P2) | — |
+| `TELEGRAM_WEBHOOK_SECRET` | секрет для `setWebhook` (P2) | — |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | Claude-роутинг / Whisper (P2) | — |
+| `ROUTER_MODEL` / `WHISPER_MODEL` | модели роутинга/транскрипции (P2) | `claude-sonnet-4-6` / `whisper-1` |
 
 > Если managed-URL содержит `?sslmode=require`, уберите параметр (asyncpg использует свой
 > SSL); для внутренних URL Railway/Render это обычно не нужно.
@@ -187,10 +199,28 @@ railway run python -m app.seed
 - **P0 ✅** — auth + `GET/PUT /state` (мост вместо localStorage), сидер, тесты, деплой.
 - **P1 ✅** — остывание клиентов, `/suggestions/touches`, `/digest/morning`, ночная джоба,
   по-сущностный CRUD + `/links`.
-- **P2** (дальше) — Telegram + Claude: webhook, транскрипция (Whisper), роутинг интента,
-  черновик → подтверждение → запись. Нужны `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` /
-  `TELEGRAM_BOT_TOKEN`.
+- **P2 ✅ (код + юнит-тесты)** — Telegram + Claude: `/telegram/webhook`, транскрипция
+  (Whisper), роутинг интента через Claude (forced tool), петля **захват → показать →
+  подтверждение → запись** (таблица `pending_captures`), whitelist. Логика покрыта
+  юнит-тестами с фейковым LLM; **живая интеграция требует ключей и бота** (см. ниже) —
+  локально не прогонялась.
 - **P3** — мультипользовательность, регистрация, биллинг, коннекторы.
+
+### Telegram-бот (P2) — как поднять вживую
+
+```bash
+uv sync --extra ai            # ставит anthropic + openai (lazy-import в коде)
+# в .env: TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USER_IDS, TELEGRAM_WEBHOOK_SECRET,
+#         ANTHROPIC_API_KEY, OPENAI_API_KEY
+# зарегистрировать webhook (после деплоя на публичный https):
+curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+  -d "url=https://<твой-домен>/telegram/webhook" \
+  -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
+```
+
+Петля: сообщение (текст/голос) → (Whisper расшифровывает и показывает транскрипт) →
+Claude классифицирует (задача/мысль/касание) → бот присылает черновик с кнопками
+**Подтвердить / Отменить** → запись в БД только после подтверждения.
 
 ## Подключение фронта
 

@@ -111,6 +111,26 @@ class Document(Base):
     user: Mapped[User] = relationship(back_populates="documents")
 
 
+class PendingCapture(Base):
+    """A captured-but-unconfirmed item from Telegram (P2: capture → confirm → write).
+
+    Nothing is written to the user's data until they tap «Подтвердить» — the draft
+    lives here in the meantime.
+    """
+
+    __tablename__ = "pending_captures"
+    __table_args__ = (Index("ix_pending_user_status", "user_id", "status"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    chat_id: Mapped[str] = mapped_column(String(64))  # Telegram chat id
+    transcript: Mapped[str] = mapped_column(String(4000), default="")
+    # The proposed write: {entity_type, data, summary}.
+    draft: Mapped[dict] = mapped_column(JSON_VARIANT)
+    status: Mapped[str] = mapped_column(String(16), default="pending")  # pending|written|cancelled
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class LinkEdge(Base):
     """An undirected «сцепка» between any two entity refs (the relation graph)."""
 

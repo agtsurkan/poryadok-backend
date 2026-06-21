@@ -16,18 +16,17 @@ dependencies = [
     "pyjwt>=2.10",
     "bcrypt>=4.2",
     "apscheduler>=3.10",
+    "httpx>=0.28",
 ]
 
 [project.optional-dependencies]
-# P2 integrations — not needed yet, listed so the seams are explicit.
+# P2 LLM/transcription SDKs — lazily imported, install when wiring the bot.
 ai = ["anthropic>=0.40", "openai>=1.55"]
-telegram = ["aiogram>=3.15"]
 
 [dependency-groups]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
-    "httpx>=0.28",
 ]
 
 [tool.pytest.ini_options]

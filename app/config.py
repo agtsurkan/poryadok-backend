@@ -34,11 +34,14 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = True
     digest_hour: int = 7  # local hour to recompute cooling / prepare digests
 
-    # ── Optional integrations (P1/P2) ─────────────────────────────────────────
+    # ── Telegram + Claude capture (P2) ────────────────────────────────────────
     anthropic_api_key: str | None = None
     openai_api_key: str | None = None
     telegram_bot_token: str | None = None
-    telegram_allowed_user_ids: str = ""
+    telegram_allowed_user_ids: str = ""  # comma-separated Telegram user ids (whitelist)
+    telegram_webhook_secret: str | None = None  # X-Telegram-Bot-Api-Secret-Token
+    router_model: str = "claude-sonnet-4-6"  # cheap model for intent routing (brief §7)
+    whisper_model: str = "whisper-1"
 
     @field_validator("database_url")
     @classmethod
@@ -58,6 +61,22 @@ class Settings(BaseSettings):
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")
+
+    @property
+    def telegram_enabled(self) -> bool:
+        return bool(self.telegram_bot_token)
+
+    @property
+    def allowed_telegram_ids(self) -> set[int]:
+        out: set[int] = set()
+        for part in self.telegram_allowed_user_ids.split(","):
+            part = part.strip()
+            if part:
+                try:
+                    out.add(int(part))
+                except ValueError:
+                    pass
+        return out
 
 
 @lru_cache
